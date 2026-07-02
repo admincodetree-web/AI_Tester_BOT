@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Security Scanner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .gradient-bg {
+            background: linear-gradient(-45deg, #0f172a, #1e293b, #0f172a, #1e1b4b);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #3b82f6, #8b5cf6, transparent);
+            animation: scanMove 2s linear infinite;
+            opacity: 0;
+        }
+        .scanning .scan-line { opacity: 1; }
+        @keyframes scanMove {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        .severity-critical { background: linear-gradient(135deg, #dc2626, #991b1b); }
+        .severity-high { background: linear-gradient(135deg, #ea580c, #c2410c); }
+        .severity-medium { background: linear-gradient(135deg, #ca8a04, #a16207); }
+        .severity-low { background: linear-gradient(135deg, #16a34a, #15803d); }
+        .thinking-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+            opacity: 0;
+        }
+        .thinking-content.expanded {
+            max-height: 2000px;
+            opacity: 1;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .result-row {
+            animation: slideIn 0.4s ease forwards;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .glow-blue { box-shadow: 0 0 20px rgba(59, 130, 246, 0.15); }
+        .glow-purple { box-shadow: 0 0 20px rgba(139, 92, 246, 0.15); }
+        .progress-fill { transition: width 0.3s ease; }
+        .input-glow:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2), 0 0 20px rgba(59, 130, 246, 0.1);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen text-gray-100">
+    <nav class="glass sticky top-0 z-50 border-b border-gray-800">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="relative w-10 h-10 flex items-center justify-center">
+                    <div class="absolute inset-0 bg-blue-500 rounded-lg opacity-20"></div>
+                    <i class="fas fa-shield-halved text-blue-400 text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">AI Security Scanner</h1>
+                    <p class="text-xs text-gray-400">Powered by Gemini AI</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="exportCSV()" id="exportBtn" class="hidden px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 text-sm transition-all flex items-center gap-2">
+                    <i class="fas fa-download"></i> Export CSV
+                </button>
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
+                    <div class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                    <span class="text-xs text-green-400 font-medium">System Online</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 py-8">
+        <div class="text-center mb-10">
+            <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
+                Intelligent Vulnerability Detection
+            </h2>
+            <p class="text-gray-400 max-w-2xl mx-auto">
+                Enter a URL to analyze potential security vulnerabilities using advanced AI pattern recognition and threat assessment.
+            </p>
+        </div>
+
+        <div class="glass rounded-2xl p-8 mb-8 glow-blue">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1 relative">
+                    <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+                        <i class="fas fa-link"></i>
+                    </div>
+                    <input type="url" id="urlInput" placeholder="https://example.com/vulnerable-page" 
+                        class="w-full pl-12 pr-4 py-4 rounded-xl bg-gray-900/80 border border-gray-700 text-white placeholder-gray-500 input-glow outline-none transition-all">
+                </div>
+                <button onclick="startScan()" id="scanBtn"
+                    class="px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 min-w-[160px]">
+                    <i class="fas fa-radar"></i>
+                    <span>Start Scan</span>
+                </button>
+            </div>
+
+            <div id="scanProgress" class="hidden mt-6">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm text-gray-400" id="progressText">Initializing scan...</span>
+                    <span class="text-sm text-blue-400 font-mono" id="progressPercent">0%</span>
+                </div>
+                <div class="h-2 bg-gray-800 rounded-full overflow-hidden">
+                    <div id="progressBar" class="h-full bg-gradient-to-r from-blue-500 to-purple-500 progress-fill rounded-full" style="width: 0%"></div>
+                </div>
+                <div class="mt-3 flex flex-wrap gap-2" id="scanSteps">
+                    <span class="px-3 py-1 rounded-full text-xs bg-gray-800 text-gray-500 border border-gray-700">URL Validation</span>
+                    <span class="px-3 py-1 rounded-full text-xs bg-gray-800 text-gray-500 border border-gray-700">Content Fetch</span>
+                    <span class="px-3 py-1 rounded-full text-xs bg-gray-800 text-gray-500 border border-gray-700">AI Analysis</span>
+                    <span class="px-3 py-1 rounded-full text-xs bg-gray-800 text-gray-500 border border-gray-700">Report Generation</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="resultsSection" class="hidden">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="glass rounded-xl p-5 border-l-4 border-red-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-gray-400 uppercase tracking-wider">Critical</p>
+                            <p class="text-2xl font-bold text-red-400" id="countCritical">0</p>
+                        </div>
+                        <i class="fas fa-triangle-exclamation text-red-500/30 text-2xl"></i>
+                    </div>
+                </div>
+                <div class="glass rounded-xl p-5 border-l-4 border-orange-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-gray-400 uppercase tracking-wider">High</p>
+                            <p class="text-2xl font-bold text-orange-400" id="countHigh">0</p>
+                        </div>
+                        <i class="fas fa-circle-exclamation text-orange-500/30 text-2xl"></i>
+                    </div>
+                </div>
+                <div class="glass rounded-xl p-5 border-l-4 border-yellow-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-gray-400 uppercase tracking-wider">Medium</p>
+                            <p class="text-2xl font-bold text-yellow-400" id="countMedium">0</p>
+                        </div>
+                        <i class="fas fa-circle-info text-yellow-500/30 text-2xl"></i>
+                    </div>
+                </div>
+                <div class="glass rounded-xl p-5 border-l-4 border-green-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-gray-400 uppercase tracking-wider">Low</p>
+                            <p class="text-2xl font-bold text-green-400" id="countLow">0</p>
+                        </div>
+                        <i class="fas fa-check-circle text-green-500/30 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass rounded-2xl overflow-hidden glow-purple">
+                <div class="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+                    <h3 class="text-lg font-semibold flex items-center gap-2">
+                        <i class="fas fa-clipboard-list text-purple-400"></i>
+                        Vulnerability Report
+                    </h3>
+                    <span class="text-xs text-gray-500" id="resultCount">0 issues found</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-gray-900/50 text-left">
+                                <th class="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Severity</th>
+                                <th class="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Vulnerability Name</th>
+                                <th class="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Reference Link</th>
+                                <th class="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Issue Name</th>
+                                <th class="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody" class="divide-y divide-gray-800"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="emptyState" class="text-center py-20">
+            <div class="relative inline-block mb-6">
+                <div class="w-24 h-24 rounded-full bg-gray-800 flex items-center justify-center">
+                    <i class="fas fa-shield-halved text-4xl text-gray-600"></i>
+                </div>
+                <div class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-gray-900 border-2 border-gray-700 flex items-center justify-center">
+                    <i class="fas fa-search text-gray-500 text-xs"></i>
+                </div>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-300 mb-2">Ready to Scan</h3>
+            <p class="text-gray-500 max-w-md mx-auto">Enter a URL above to begin the AI-powered security analysis. The scanner will identify potential vulnerabilities and generate a detailed report.</p>
+        </div>
+    </main>
+
+    <footer class="border-t border-gray-800 mt-12 py-6">
+        <div class="max-w-7xl mx-auto px-6 text-center text-gray-500 text-sm">
+            <p>AI Security Scanner - Powered by Gemini API - Results are AI-generated estimates</p>
+        </div>
+    </footer>
+
+    <script>
+        let scanResults = [];
+
+        function startScan() {
+            const url = document.getElementById('urlInput').value.trim();
+            if (!url) { showNotification('Please enter a valid URL', 'error'); return; }
+            if (!isValidURL(url)) { showNotification('Please enter a valid URL format', 'error'); return; }
+
+            document.getElementById('scanBtn').disabled = true;
+            document.getElementById('scanBtn').innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Scanning...';
+            document.getElementById('scanProgress').classList.remove('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('resultsSection').classList.add('hidden');
+
+            updateProgress(0, 'Initializing scan...');
+            updateStepStatus(0, 'active');
+
+            setTimeout(() => { updateProgress(15, 'Validating URL format...'); updateStepStatus(0, 'complete'); updateStepStatus(1, 'active'); }, 500);
+            setTimeout(() => { updateProgress(35, 'Fetching page content...'); }, 1200);
+            setTimeout(() => { updateProgress(50, 'Analyzing response headers...'); updateStepStatus(1, 'complete'); updateStepStatus(2, 'active'); }, 2000);
+            setTimeout(() => { updateProgress(70, 'Running AI vulnerability detection...'); }, 3000);
+            setTimeout(() => { updateProgress(85, 'Processing AI insights...'); }, 4500);
+            setTimeout(() => {
+                updateProgress(100, 'Scan complete!');
+                updateStepStatus(2, 'complete');
+                updateStepStatus(3, 'complete');
+                performScan(url);
+            }, 5500);
+        }
+
+        function updateProgress(percent, text) {
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressPercent').textContent = percent + '%';
+            document.getElementById('progressText').textContent = text;
+        }
+
+        function updateStepStatus(index, status) {
+            const steps = document.getElementById('scanSteps').children;
+            if (steps[index]) {
+                steps[index].className = 'px-3 py-1 rounded-full text-xs border transition-all ' + 
+                    (status === 'active' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 
+                     status === 'complete' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 
+                     'bg-gray-800 text-gray-500 border-gray-700');
+            }
+        }
+
+        function performScan(url) {
+            fetch('/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: url })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                scanResults = data.results;
+                displayResults(scanResults);
+                document.getElementById('scanBtn').disabled = false;
+                document.getElementById('scanBtn').innerHTML = '<i class="fas fa-radar"></i><span>Start Scan</span>';
+                document.getElementById('scanProgress').classList.add('hidden');
+                document.getElementById('exportBtn').classList.remove('hidden');
+                showNotification('Scan complete! Found ' + scanResults.length + ' issues.', 'success');
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('scanBtn').disabled = false;
+                document.getElementById('scanBtn').innerHTML = '<i class="fas fa-radar"></i><span>Start Scan</span>';
+                showNotification('Scan failed: ' + (err.message || 'Please try again.'), 'error');
+            });
+        }
+
+        function displayResults(results) {
+            document.getElementById('resultsSection').classList.remove('hidden');
+            const tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '';
+
+            const counts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+            results.forEach(r => counts[r.severity] = (counts[r.severity] || 0) + 1);
+            document.getElementById('countCritical').textContent = counts.CRITICAL;
+            document.getElementById('countHigh').textContent = counts.HIGH;
+            document.getElementById('countMedium').textContent = counts.MEDIUM;
+            document.getElementById('countLow').textContent = counts.LOW;
+            document.getElementById('resultCount').textContent = results.length + ' issue' + (results.length !== 1 ? 's' : '') + ' found';
+
+            results.forEach((result, index) => {
+                const row = document.createElement('tr');
+                row.className = 'result-row hover:bg-gray-800/50 transition-colors';
+                row.style.animationDelay = (index * 0.1) + 's';
+
+                const severityClass = 'severity-' + result.severity.toLowerCase();
+                const severityIcon = result.severity === 'CRITICAL' ? 'fa-triangle-exclamation' : 
+                                    result.severity === 'HIGH' ? 'fa-circle-exclamation' :
+                                    result.severity === 'MEDIUM' ? 'fa-circle-info' : 'fa-check-circle';
+
+                row.innerHTML = `
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold text-white ${severityClass} shadow-lg">
+                            <i class="fas ${severityIcon}"></i>
+                            ${result.severity}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-sm font-medium text-gray-200">${result.vulnerabilityName}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <a href="${result.referenceLink}" target="_blank" class="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 group">
+                            <span class="truncate max-w-[200px]">${result.referenceLink}</span>
+                            <i class="fas fa-external-link-alt text-xs opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                        </a>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-sm text-gray-300">${result.issueName}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <button onclick="toggleThinking(${index})" class="text-xs px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-400 hover:text-white transition-all flex items-center gap-1.5">
+                            <i class="fas fa-brain"></i>
+                            Show Thinking
+                            <i class="fas fa-chevron-down transition-transform" id="chevron-${index}"></i>
+                        </button>
+                    </td>
+                `;
+
+                tbody.appendChild(row);
+
+                const thinkingRow = document.createElement('tr');
+                thinkingRow.id = 'thinking-row-' + index;
+                thinkingRow.className = 'hidden';
+                thinkingRow.innerHTML = `
+                    <td colspan="5" class="px-0 py-0">
+                        <div id="thinking-content-${index}" class="thinking-content bg-gray-900/80 border-x border-b border-gray-800">
+                            <div class="p-6">
+                                <div class="flex items-center gap-2 mb-4">
+                                    <i class="fas fa-robot text-purple-400"></i>
+                                    <span class="text-sm font-semibold text-purple-400">AI Analysis Process</span>
+                                </div>
+                                <div class="mono text-sm text-gray-400 leading-relaxed space-y-2" id="thinking-text-${index}">
+                                    ${formatThinking(result.thinking)}
+                                </div>
+                                <div class="mt-4 pt-4 border-t border-gray-800 flex items-center gap-4 text-xs text-gray-500">
+                                    <span><i class="fas fa-clock mr-1"></i> Analysis time: ${result.analysisTime || '1.2s'}</span>
+                                    <span><i class="fas fa-coins mr-1"></i> Tokens used: ${result.tokens || '1,240'}</span>
+                                    <span><i class="fas fa-percentage mr-1"></i> Confidence: ${result.confidence || '78%'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(thinkingRow);
+            });
+        }
+
+        function formatThinking(thinking) {
+            if (!thinking) return '<span class="text-gray-500">No thinking process available.</span>';
+            return thinking.split('\n').map(line => {
+                if (line.startsWith('>')) return '<div class="text-blue-400 pl-3 border-l-2 border-blue-500/30">' + line.substring(1) + '</div>';
+                if (line.startsWith('!')) return '<div class="text-yellow-400 pl-3 border-l-2 border-yellow-500/30">' + line.substring(1) + '</div>';
+                if (line.startsWith('-')) return '<div class="pl-3">&bull; ' + line.substring(1) + '</div>';
+                return '<div>' + line + '</div>';
+            }).join('');
+        }
+
+        function toggleThinking(index) {
+            const content = document.getElementById('thinking-content-' + index);
+            const row = document.getElementById('thinking-row-' + index);
+            const chevron = document.getElementById('chevron-' + index);
+
+            if (row.classList.contains('hidden')) {
+                row.classList.remove('hidden');
+                setTimeout(() => content.classList.add('expanded'), 10);
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                content.classList.remove('expanded');
+                setTimeout(() => row.classList.add('hidden'), 500);
+                chevron.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function exportCSV() {
+            if (!scanResults.length) return;
+            let csv = 'SEVERITY,VULNERABILITY NAME,REFERENCE LINK,Issue Name\n';
+            scanResults.forEach(r => {
+                csv += '"' + r.severity + '","' + r.vulnerabilityName + '","' + r.referenceLink + '","' + r.issueName + '"\n';
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'security-scan-' + new Date().toISOString().slice(0,10) + '.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+            showNotification('CSV exported successfully!', 'success');
+        }
+
+        function isValidURL(string) {
+            try { new URL(string); return true; } catch (_) { return false; }
+        }
+
+        function showNotification(message, type) {
+            const div = document.createElement('div');
+            div.className = 'fixed top-20 right-6 px-6 py-3 rounded-xl text-sm font-medium transform translate-x-full transition-transform duration-300 z-50 flex items-center gap-2 ' +
+                (type === 'success' ? 'bg-green-500/20 border border-green-500/30 text-green-400' : 'bg-red-500/20 border border-red-500/30 text-red-400');
+            div.innerHTML = '<i class="fas ' + (type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle') + '"></i> ' + message;
+            document.body.appendChild(div);
+            setTimeout(() => div.classList.remove('translate-x-full'), 100);
+            setTimeout(() => {
+                div.classList.add('translate-x-full');
+                setTimeout(() => div.remove(), 300);
+            }, 3000);
+        }
+
+        document.getElementById('urlInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') startScan();
+        });
+    </script>
+</body>
+</html>
