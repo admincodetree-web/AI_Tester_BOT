@@ -180,6 +180,28 @@
                     </div>
                 </div>
             </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="glass rounded-xl p-5 border-l-4 border-sky-500">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <p class="text-xs text-gray-400 uppercase tracking-wider">Page Quality KPI</p>
+                            <p class="text-3xl font-bold text-sky-400" id="qualityScore">0%</p>
+                        </div>
+                        <i class="fas fa-chart-line text-sky-400/30 text-3xl"></i>
+                    </div>
+                    <p class="mt-3 text-sm text-gray-400" id="qualityScoreText">Score based on page quality, security headers, and UX checks.</p>
+                </div>
+                <div class="glass rounded-xl p-5 border-l-4 border-violet-500">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <p class="text-xs text-gray-400 uppercase tracking-wider">Report Totals</p>
+                            <p class="text-3xl font-bold text-violet-400" id="totalIssues">0</p>
+                        </div>
+                        <i class="fas fa-calculator text-violet-400/30 text-3xl"></i>
+                    </div>
+                    <p class="mt-3 text-sm text-gray-400">Total detected issues across security, UX, and quality checks.</p>
+                </div>
+            </div>
 
             <div class="glass rounded-2xl overflow-hidden glow-purple">
                 <div class="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
@@ -204,7 +226,49 @@
                     </table>
                 </div>
             </div>
-        </div>
+            <div id="summaryPanel" class="glass rounded-2xl overflow-hidden glow-purple mt-6 hidden">
+                <div class="px-6 py-5 border-b border-gray-800 flex items-center justify-between">
+                    <h3 class="text-lg font-semibold flex items-center gap-2">
+                        <i class="fas fa-circle-info text-purple-400"></i>
+                        Scan Summary
+                    </h3>
+                    <span class="text-xs text-gray-500" id="summaryScoreText">Quality and security overview</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
+                    <div class="glass rounded-xl p-4 bg-gray-900/80 border border-gray-800">
+                        <p class="text-xs uppercase tracking-wider text-gray-400">Header Coverage</p>
+                        <p class="mt-3 text-2xl font-bold text-sky-400" id="summaryHeaderCoverage">0%</p>
+                        <p class="mt-2 text-sm text-gray-500">Security headers present in response.</p>
+                    </div>
+                    <div class="glass rounded-xl p-4 bg-gray-900/80 border border-gray-800">
+                        <p class="text-xs uppercase tracking-wider text-gray-400">Look & Feel</p>
+                        <p class="mt-3 text-2xl font-bold text-violet-400" id="summaryLookFeel">0/100</p>
+                        <p class="mt-2 text-sm text-gray-500">Metadata and page quality signals.</p>
+                    </div>
+                    <div class="glass rounded-xl p-4 bg-gray-900/80 border border-gray-800">
+                        <p class="text-xs uppercase tracking-wider text-gray-400">Sensitive Finds</p>
+                        <p class="mt-3 text-2xl font-bold text-amber-400" id="summaryAadhaar">0</p>
+                        <p class="mt-2 text-sm text-gray-500">Potential Aadhaar or PII exposures.</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 px-6 pb-6">
+                    <div class="glass rounded-xl p-4 bg-gray-900/80 border border-gray-800">
+                        <p class="text-xs uppercase tracking-wider text-gray-400">Spell Issues</p>
+                        <p class="mt-3 text-2xl font-bold text-rose-400" id="summarySpell">0</p>
+                        <p class="mt-2 text-sm text-gray-500">Detected spelling or repeated word issues.</p>
+                    </div>
+                    <div class="glass rounded-xl p-4 bg-gray-900/80 border border-gray-800">
+                        <p class="text-xs uppercase tracking-wider text-gray-400">Login Issues</p>
+                        <p class="mt-3 text-2xl font-bold text-orange-400" id="summaryLoginIssues">0</p>
+                        <p class="mt-2 text-sm text-gray-500">Unsecure credential form setups.</p>
+                    </div>
+                    <div class="glass rounded-xl p-4 bg-gray-900/80 border border-gray-800">
+                        <p class="text-xs uppercase tracking-wider text-gray-400">Total Issues</p>
+                        <p class="mt-3 text-2xl font-bold text-white" id="summaryTotal">0</p>
+                        <p class="mt-2 text-sm text-gray-500">Overall detected findings.</p>
+                    </div>
+                </div>
+            </div>
 
         <div id="emptyState" class="text-center py-20">
             <div class="relative inline-block mb-6">
@@ -283,8 +347,8 @@
                 if (data.error) {
                     throw new Error(data.error);
                 }
-                scanResults = data.results;
-                displayResults(scanResults);
+                scanResults = data.results || [];
+                displayResults(scanResults, data.summary || {});
                 document.getElementById('scanBtn').disabled = false;
                 document.getElementById('scanBtn').innerHTML = '<i class="fas fa-radar"></i><span>Start Scan</span>';
                 document.getElementById('scanProgress').classList.add('hidden');
@@ -299,7 +363,7 @@
             });
         }
 
-        function displayResults(results) {
+        function displayResults(results, summary = {}) {
             document.getElementById('resultsSection').classList.remove('hidden');
             const tbody = document.getElementById('resultsBody');
             tbody.innerHTML = '';
@@ -311,6 +375,14 @@
             document.getElementById('countMedium').textContent = counts.MEDIUM;
             document.getElementById('countLow').textContent = counts.LOW;
             document.getElementById('resultCount').textContent = results.length + ' issue' + (results.length !== 1 ? 's' : '') + ' found';
+            document.getElementById('qualityScore').textContent = (summary.qualityScore || 0) + '%';
+            document.getElementById('totalIssues').textContent = (summary.totals ? summary.totals.total : results.length) || 0;
+            document.getElementById('summaryHeaderCoverage').textContent = (summary.securityHeaderCoverage || 0) + '%';
+            document.getElementById('summaryLookFeel').textContent = (summary.lookAndFeelScore || 0) + '/100';
+            document.getElementById('summaryAadhaar').textContent = summary.missingAadhaarMasks || 0;
+            document.getElementById('summarySpell').textContent = summary.spellIssues || 0;
+            document.getElementById('summaryLoginIssues').textContent = summary.loginFormIssues || 0;
+            document.getElementById('summaryPanel').classList.remove('hidden');
 
             results.forEach((result, index) => {
                 const row = document.createElement('tr');
