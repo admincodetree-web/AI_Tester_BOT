@@ -25,6 +25,11 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
 GEMINI_USE_API = os.getenv('GEMINI_USE_API', 'false').strip().lower() in ('1', 'true', 'yes')
 
+# OWASP ZAP configuration
+ZAP_USE_API = os.getenv('ZAP_USE_API', 'false').strip().lower() in ('1', 'true', 'yes')
+ZAP_API_KEY = os.getenv('ZAP_API_KEY', '')
+ZAP_PROXY_URL = os.getenv('ZAP_PROXY_URL', 'http://127.0.0.1:8080')
+
 
 def load_vulnerability_catalog():
     catalog_path = os.path.join(os.path.dirname(__file__), 'Web App Vulnerabilities.xlsx')
@@ -567,6 +572,7 @@ def extract_text_from_gemini_response(response):
 def call_gemini_api(prompt: str):
     try:
         from google import genai
+        from google.genai import types
     except ImportError as exc:
         raise RuntimeError(
             'Gemini integration requires the google GenAI package. Install with: pip install -r requirements.txt'
@@ -577,7 +583,15 @@ def call_gemini_api(prompt: str):
         client = genai.Client(api_key=GEMINI_API_KEY)
 
         app.logger.info(f'Sending prompt to Gemini API ({GEMINI_MODEL})...')
-        response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.0,
+                top_p=1.0,
+                top_k=1
+            )
+        )
 
         if not response:
             raise ValueError('Gemini API returned empty response')
@@ -730,6 +744,95 @@ def analyze_unreachable_url(url: str, error_msg: str):
     return findings
 
 
+def run_zap_scan(target_url: str):
+    """Connect to OWASP ZAP daemon and run a Spider + Passive Scan.
+    Returns a list of normalized findings on success, or an empty list on failure.
+    ZAP must be running at ZAP_PROXY_URL with API access enabled.
+    Active scan is intentionally skipped to avoid long timeouts in serverless environments.
+    """
+    if not ZAP_USE_API or not ZAP_API_KEY:
+        return []
+
+    try:
+        import time
+        from zapv2 import ZAPv2
+    except ImportError:
+        app.logger.warning('python-owasp-zap-v2.4 not installed. Skipping ZAP scan.')
+        return []
+
+    try:
+        app.logger.info(f'Connecting to ZAP at {ZAP_PROXY_URL}...')
+        zap = ZAPv2(
+            proxies={'http': ZAP_PROXY_URL, 'https': ZAP_PROXY_URL},
+            apikey=ZAP_API_KEY,
+        )
+
+        # Verify ZAP is reachable
+        version = zap.core.version
+        app.logger.info(f'ZAP connection successful. Version: {version}')
+
+        # Access the target URL so ZAP registers it in its site tree
+        zap.core.access_url(target_url, followredirects=True)
+        app.logger.info(f'ZAP accessed target URL: {target_url}')
+
+        # Run Spider to crawl accessible pages (passive, no payload injection)
+        spider_id = zap.spider.scan(url=target_url, apikey=ZAP_API_KEY)
+        app.logger.info(f'ZAP spider started, ID: {spider_id}')
+
+        # Poll spider with a max wait of 30 seconds (safe for Vercel Pro)
+        max_spider_wait = 30
+        elapsed = 0
+        while int(zap.spider.status(spider_id)) < 100 and elapsed < max_spider_wait:
+            time.sleep(2)
+            elapsed += 2
+
+        spider_status = zap.spider.status(spider_id)
+        app.logger.info(f'ZAP spider finished at {spider_status}% after {elapsed}s.')
+
+        # Wait briefly for passive scan queue to process
+        time.sleep(3)
+
+        # Retrieve alerts (passive scan findings)
+        alerts = zap.core.alerts(baseurl=target_url)
+        app.logger.info(f'ZAP returned {len(alerts)} alerts.')
+
+        findings = []
+        for alert in alerts:
+            raw_risk = alert.get('risk', 'Low')
+            # Map ZAP risk levels to our severity format
+            severity_map = {'High': 'HIGH', 'Medium': 'MEDIUM', 'Low': 'LOW', 'Informational': 'LOW'}
+            severity = severity_map.get(raw_risk, 'LOW')
+
+            ref = alert.get('reference', '').strip()
+            # ZAP references can be multi-line; take the first URL-like line
+            ref_url = next(
+                (line.strip() for line in ref.splitlines() if line.strip().startswith('http')),
+                'https://owasp.org'
+            )
+
+            evidence = alert.get('evidence', '')
+            solution = alert.get('solution', '')
+            description = alert.get('description', '')
+            thinking = f"Description: {description}\nEvidence: {evidence}\nSolution: {solution}".strip()
+
+            findings.append({
+                'severity': severity,
+                'vulnerabilityName': alert.get('alert', 'Unknown ZAP Finding'),
+                'referenceLink': ref_url,
+                'issueName': alert.get('name', alert.get('alert', 'No description')),
+                'thinking': thinking,
+                'analysisTime': f'{elapsed}s (ZAP Spider)',
+                'tokens': format_token_annotation(0, 0),
+                'source': 'ZAP',
+            })
+
+        return findings
+
+    except Exception as exc:
+        app.logger.error(f'ZAP scan failed: {type(exc).__name__}: {exc}', exc_info=True)
+        return []
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -782,9 +885,19 @@ def scan():
         elif GEMINI_USE_API and not GEMINI_API_KEY:
             app.logger.warning('GEMINI_USE_API is enabled but GEMINI_API_KEY is not set. Skipping AI request.')
 
+        # OWASP ZAP active/passive scan integration
+        zap_results = []
+        if ZAP_USE_API and ZAP_API_KEY:
+            app.logger.info('Starting OWASP ZAP scan...')
+            zap_results = run_zap_scan(url)
+            app.logger.info(f'ZAP scan returned {len(zap_results)} findings.')
+        elif ZAP_USE_API and not ZAP_API_KEY:
+            app.logger.warning('ZAP_USE_API is enabled but ZAP_API_KEY is not set. Skipping ZAP scan.')
+
         combined = []
         seen = set()
-        for result in static_results + ai_results:
+        # Merge: static checks + Gemini AI findings + ZAP findings
+        for result in static_results + ai_results + zap_results:
             key = result.get('vulnerabilityName', '').strip().lower()
             if not key:
                 continue
