@@ -1,30 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Security Scanner</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * { font-family: 'Inter', sans-serif; }
-        .mono { font-family: 'JetBrains Mono', monospace; }
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
         .gradient-bg {
             background: linear-gradient(-45deg, #0f172a, #1e293b, #0f172a, #1e1b4b);
             background-size: 400% 400%;
             animation: gradientShift 15s ease infinite;
         }
+
         @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
         }
+
         .glass {
             background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
+
         .scan-line {
             position: absolute;
             top: 0;
@@ -35,44 +55,101 @@
             animation: scanMove 2s linear infinite;
             opacity: 0;
         }
-        .scanning .scan-line { opacity: 1; }
-        @keyframes scanMove {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+
+        .scanning .scan-line {
+            opacity: 1;
         }
-        .severity-critical { background: linear-gradient(135deg, #dc2626, #991b1b); }
-        .severity-high { background: linear-gradient(135deg, #ea580c, #c2410c); }
-        .severity-medium { background: linear-gradient(135deg, #ca8a04, #a16207); }
-        .severity-low { background: linear-gradient(135deg, #16a34a, #15803d); }
+
+        @keyframes scanMove {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        .severity-critical {
+            background: linear-gradient(135deg, #dc2626, #991b1b);
+        }
+
+        .severity-high {
+            background: linear-gradient(135deg, #ea580c, #c2410c);
+        }
+
+        .severity-medium {
+            background: linear-gradient(135deg, #ca8a04, #a16207);
+        }
+
+        .severity-low {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+        }
+
         .thinking-content {
             max-height: 0;
             overflow: hidden;
             transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
             opacity: 0;
         }
+
         .thinking-content.expanded {
             max-height: 2000px;
             opacity: 1;
         }
+
         @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
+
         .result-row {
             animation: slideIn 0.4s ease forwards;
         }
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
-        .glow-blue { box-shadow: 0 0 20px rgba(59, 130, 246, 0.15); }
-        .glow-purple { box-shadow: 0 0 20px rgba(139, 92, 246, 0.15); }
-        .progress-fill { transition: width 0.3s ease; }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        .glow-blue {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+        }
+
+        .glow-purple {
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+        }
+
+        .progress-fill {
+            transition: width 0.3s ease;
+        }
+
         .input-glow:focus {
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2), 0 0 20px rgba(59, 130, 246, 0.1);
         }
     </style>
 </head>
+
 <body class="gradient-bg min-h-screen text-gray-100">
     <nav class="glass sticky top-0 z-50 border-b border-gray-800">
         <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -87,10 +164,12 @@
                 </div>
             </div>
             <div class="flex items-center gap-4">
-                <button onclick="exportCSV()" id="exportBtn" class="hidden px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 text-sm transition-all flex items-center gap-2">
+                <button onclick="exportCSV()" id="exportBtn"
+                    class="hidden px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 text-sm transition-all flex items-center gap-2">
                     <i class="fas fa-download"></i> Export CSV
                 </button>
-                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
+                <div
+                    class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
                     <div class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
                     <span class="text-xs text-green-400 font-medium">System Online</span>
                 </div>
@@ -100,11 +179,13 @@
 
     <main class="max-w-7xl mx-auto px-6 py-8">
         <div class="text-center mb-10">
-            <h2 class="text-4xl font-bold mb-3 bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
+            <h2
+                class="text-4xl font-bold mb-3 bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
                 Intelligent Vulnerability Detection
             </h2>
             <p class="text-gray-400 max-w-2xl mx-auto">
-                Enter a URL to analyze potential security vulnerabilities using advanced AI pattern recognition and threat assessment.
+                Enter a URL to analyze potential security vulnerabilities using advanced AI pattern recognition and
+                threat assessment.
             </p>
         </div>
 
@@ -114,7 +195,7 @@
                     <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
                         <i class="fas fa-link"></i>
                     </div>
-                    <input type="url" id="urlInput" placeholder="https://example.com/vulnerable-page" 
+                    <input type="url" id="urlInput" placeholder="https://example.com/vulnerable-page"
                         class="w-full pl-12 pr-4 py-4 rounded-xl bg-gray-900/80 border border-gray-700 text-white placeholder-gray-500 input-glow outline-none transition-all">
                 </div>
                 <button onclick="startScan()" id="scanBtn"
@@ -130,13 +211,20 @@
                     <span class="text-sm text-blue-400 font-mono" id="progressPercent">0%</span>
                 </div>
                 <div class="h-2 bg-gray-800 rounded-full overflow-hidden">
-                    <div id="progressBar" class="h-full bg-gradient-to-r from-blue-500 to-purple-500 progress-fill rounded-full" style="width: 0%"></div>
+                    <div id="progressBar"
+                        class="h-full bg-gradient-to-r from-blue-500 to-purple-500 progress-fill rounded-full"
+                        style="width: 0%"></div>
                 </div>
                 <div class="mt-3 flex flex-wrap gap-2" id="scanSteps">
-                    <span class="px-3 py-1 rounded-full text-xs bg-gray-800 text-gray-500 border border-gray-700">URL Validation</span>
-                    <span class="px-3 py-1 rounded-full text-xs bg-gray-800 text-gray-500 border border-gray-700">Content Fetch</span>
-                    <span class="px-3 py-1 rounded-full text-xs bg-gray-800 text-gray-500 border border-gray-700">AI Analysis</span>
-                    <span class="px-3 py-1 rounded-full text-xs bg-gray-800 text-gray-500 border border-gray-700">Report Generation</span>
+                    <span class="px-3 py-1 rounded-full text-xs bg-gray-800 text-gray-500 border border-gray-700">URL
+                        Validation</span>
+                    <span
+                        class="px-3 py-1 rounded-full text-xs bg-gray-800 text-gray-500 border border-gray-700">Content
+                        Fetch</span>
+                    <span class="px-3 py-1 rounded-full text-xs bg-gray-800 text-gray-500 border border-gray-700">AI
+                        Analysis</span>
+                    <span class="px-3 py-1 rounded-full text-xs bg-gray-800 text-gray-500 border border-gray-700">Report
+                        Generation</span>
                 </div>
             </div>
         </div>
@@ -189,7 +277,8 @@
                         </div>
                         <i class="fas fa-chart-line text-sky-400/30 text-3xl"></i>
                     </div>
-                    <p class="mt-3 text-sm text-gray-400" id="qualityScoreText">Score based on page quality, security headers, and UX checks.</p>
+                    <p class="mt-3 text-sm text-gray-400" id="qualityScoreText">Score based on page quality, security
+                        headers, and UX checks.</p>
                 </div>
                 <div class="glass rounded-xl p-5 border-l-4 border-violet-500">
                     <div class="flex items-center justify-between gap-4">
@@ -199,7 +288,8 @@
                         </div>
                         <i class="fas fa-calculator text-violet-400/30 text-3xl"></i>
                     </div>
-                    <p class="mt-3 text-sm text-gray-400">Total detected issues across security, UX, and quality checks.</p>
+                    <p class="mt-3 text-sm text-gray-400">Total detected issues across security, UX, and quality checks.
+                    </p>
                 </div>
             </div>
 
@@ -215,11 +305,16 @@
                     <table class="w-full">
                         <thead>
                             <tr class="bg-gray-900/50 text-left">
-                                <th class="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Severity</th>
-                                <th class="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Vulnerability Name</th>
-                                <th class="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Reference Link</th>
-                                <th class="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Issue Name</th>
-                                <th class="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
+                                <th class="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                    Severity</th>
+                                <th class="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                    Vulnerability Name</th>
+                                <th class="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                    Reference Link</th>
+                                <th class="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Issue
+                                    Name</th>
+                                <th class="px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                    Actions</th>
                             </tr>
                         </thead>
                         <tbody id="resultsBody" class="divide-y divide-gray-800"></tbody>
@@ -270,18 +365,20 @@
                 </div>
             </div>
 
-        <div id="emptyState" class="text-center py-20">
-            <div class="relative inline-block mb-6">
-                <div class="w-24 h-24 rounded-full bg-gray-800 flex items-center justify-center">
-                    <i class="fas fa-shield-halved text-4xl text-gray-600"></i>
+            <div id="emptyState" class="text-center py-20">
+                <div class="relative inline-block mb-6">
+                    <div class="w-24 h-24 rounded-full bg-gray-800 flex items-center justify-center">
+                        <i class="fas fa-shield-halved text-4xl text-gray-600"></i>
+                    </div>
+                    <div
+                        class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-gray-900 border-2 border-gray-700 flex items-center justify-center">
+                        <i class="fas fa-search text-gray-500 text-xs"></i>
+                    </div>
                 </div>
-                <div class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-gray-900 border-2 border-gray-700 flex items-center justify-center">
-                    <i class="fas fa-search text-gray-500 text-xs"></i>
-                </div>
+                <h3 class="text-xl font-semibold text-gray-300 mb-2">Ready to Scan</h3>
+                <p class="text-gray-500 max-w-md mx-auto">Enter a URL above to begin the AI-powered security analysis.
+                    The scanner will identify potential vulnerabilities and generate a detailed report.</p>
             </div>
-            <h3 class="text-xl font-semibold text-gray-300 mb-2">Ready to Scan</h3>
-            <p class="text-gray-500 max-w-md mx-auto">Enter a URL above to begin the AI-powered security analysis. The scanner will identify potential vulnerabilities and generate a detailed report.</p>
-        </div>
     </main>
 
     <footer class="border-t border-gray-800 mt-12 py-6">
@@ -329,10 +426,10 @@
         function updateStepStatus(index, status) {
             const steps = document.getElementById('scanSteps').children;
             if (steps[index]) {
-                steps[index].className = 'px-3 py-1 rounded-full text-xs border transition-all ' + 
-                    (status === 'active' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 
-                     status === 'complete' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 
-                     'bg-gray-800 text-gray-500 border-gray-700');
+                steps[index].className = 'px-3 py-1 rounded-full text-xs border transition-all ' +
+                    (status === 'active' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                        status === 'complete' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                            'bg-gray-800 text-gray-500 border-gray-700');
             }
         }
 
@@ -342,25 +439,25 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ url: url })
             })
-            .then(res => res.json())
-            .then(data => {
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                scanResults = data.results || [];
-                displayResults(scanResults, data.summary || {});
-                document.getElementById('scanBtn').disabled = false;
-                document.getElementById('scanBtn').innerHTML = '<i class="fas fa-radar"></i><span>Start Scan</span>';
-                document.getElementById('scanProgress').classList.add('hidden');
-                document.getElementById('exportBtn').classList.remove('hidden');
-                showNotification('Scan complete! Found ' + scanResults.length + ' issues.', 'success');
-            })
-            .catch(err => {
-                console.error(err);
-                document.getElementById('scanBtn').disabled = false;
-                document.getElementById('scanBtn').innerHTML = '<i class="fas fa-radar"></i><span>Start Scan</span>';
-                showNotification('Scan failed: ' + (err.message || 'Please try again.'), 'error');
-            });
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    scanResults = data.results || [];
+                    displayResults(scanResults, data.summary || {});
+                    document.getElementById('scanBtn').disabled = false;
+                    document.getElementById('scanBtn').innerHTML = '<i class="fas fa-radar"></i><span>Start Scan</span>';
+                    document.getElementById('scanProgress').classList.add('hidden');
+                    document.getElementById('exportBtn').classList.remove('hidden');
+                    showNotification('Scan complete! Found ' + scanResults.length + ' issues.', 'success');
+                })
+                .catch(err => {
+                    console.error(err);
+                    document.getElementById('scanBtn').disabled = false;
+                    document.getElementById('scanBtn').innerHTML = '<i class="fas fa-radar"></i><span>Start Scan</span>';
+                    showNotification('Scan failed: ' + (err.message || 'Please try again.'), 'error');
+                });
         }
 
         function displayResults(results, summary = {}) {
@@ -390,9 +487,20 @@
                 row.style.animationDelay = (index * 0.1) + 's';
 
                 const severityClass = 'severity-' + result.severity.toLowerCase();
-                const severityIcon = result.severity === 'CRITICAL' ? 'fa-triangle-exclamation' : 
-                                    result.severity === 'HIGH' ? 'fa-circle-exclamation' :
-                                    result.severity === 'MEDIUM' ? 'fa-circle-info' : 'fa-check-circle';
+                const severityIcon = result.severity === 'CRITICAL' ? 'fa-triangle-exclamation' :
+                    result.severity === 'HIGH' ? 'fa-circle-exclamation' :
+                        result.severity === 'MEDIUM' ? 'fa-circle-info' : 'fa-check-circle';
+
+                // Source badge: ZAP = orange, AI = purple, Static = gray
+                const sourceBadge = result.source === 'ZAP'
+                    ? `<span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30">ZAP</span>`
+                    : result.tokens && result.tokens !== 'input=0 output=0'
+                        ? `<span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30">AI</span>`
+                        : `<span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-700/50 text-gray-400 border border-gray-600/30">Static</span>`;
+
+                const sourceLabel = result.source === 'ZAP' ? 'ZAP Passive Scan' : (result.tokens && result.tokens !== 'input=0 output=0' ? 'AI Analysis Process' : 'Static Analysis');
+                const sourceIcon = result.source === 'ZAP' ? 'fa-shield-halved text-orange-400' : (result.tokens && result.tokens !== 'input=0 output=0' ? 'fa-robot text-purple-400' : 'fa-magnifying-glass text-gray-400');
+                const sourceColor = result.source === 'ZAP' ? 'text-orange-400' : (result.tokens && result.tokens !== 'input=0 output=0' ? 'text-purple-400' : 'text-gray-400');
 
                 row.innerHTML = `
                     <td class="px-6 py-4">
@@ -402,7 +510,7 @@
                         </span>
                     </td>
                     <td class="px-6 py-4">
-                        <span class="text-sm font-medium text-gray-200">${result.vulnerabilityName}</span>
+                        <span class="text-sm font-medium text-gray-200">${result.vulnerabilityName}</span>${sourceBadge}
                     </td>
                     <td class="px-6 py-4">
                         <a href="${result.referenceLink}" target="_blank" class="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 group">
@@ -432,8 +540,8 @@
                         <div id="thinking-content-${index}" class="thinking-content bg-gray-900/80 border-x border-b border-gray-800">
                             <div class="p-6">
                                 <div class="flex items-center gap-2 mb-4">
-                                    <i class="fas fa-robot text-purple-400"></i>
-                                    <span class="text-sm font-semibold text-purple-400">AI Analysis Process</span>
+                                    <i class="fas ${sourceIcon}"></i>
+                                    <span class="text-sm font-semibold ${sourceColor}">${sourceLabel}</span>
                                 </div>
                                 <div class="mono text-sm text-gray-400 leading-relaxed space-y-2" id="thinking-text-${index}">
                                     ${formatThinking(result.thinking)}
@@ -450,6 +558,7 @@
                 tbody.appendChild(thinkingRow);
             });
         }
+
 
         function formatThinking(thinking) {
             if (!thinking) return '<span class="text-gray-500">No thinking process available.</span>';
@@ -487,7 +596,7 @@
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'security-scan-' + new Date().toISOString().slice(0,10) + '.csv';
+            a.download = 'security-scan-' + new Date().toISOString().slice(0, 10) + '.csv';
             a.click();
             window.URL.revokeObjectURL(url);
             showNotification('CSV exported successfully!', 'success');
@@ -510,9 +619,10 @@
             }, 3000);
         }
 
-        document.getElementById('urlInput').addEventListener('keypress', function(e) {
+        document.getElementById('urlInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') startScan();
         });
     </script>
 </body>
+
 </html>
